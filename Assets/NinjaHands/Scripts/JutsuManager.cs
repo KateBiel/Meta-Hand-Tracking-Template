@@ -22,6 +22,9 @@ public class JutsuDefinition
 
     [Tooltip("Max seconds allowed between signs before the sequence resets. 0 = no timeout.")]
     public float stepTimeout = 4f;
+
+    [Tooltip("Chakra consumed when this jutsu completes. Detection won't start if the player can't afford it.")]
+    public float chakraCost = 20f;
 }
 
 public class JutsuManager : MonoBehaviour
@@ -34,11 +37,20 @@ public class JutsuManager : MonoBehaviour
     [Tooltip("Button mode only: total seconds allowed from BeginDetection() to finish the whole jutsu. Fires OnSequenceReset and stops detecting when exceeded, even if no sign was completed. 0 = disabled.")]
     [SerializeField] private float detectionTimeout = 15f;
 
+    [Header("Chakra")]
+    [Tooltip("Optional. If assigned, jutsus with chakraCost > 0 are gated and consume chakra on completion.")]
+    [SerializeField] private ChakraSystem chakra;
+
+    [Tooltip("If true, chakra is taken at BeginDetection (commit up front). If false, it's taken only when the jutsu completes.")]
+    [SerializeField] private bool spendOnStart = false;
+
     [Header("Events")]
     public UnityEvent<string> OnDetectionStarted;
     public UnityEvent<string, int> OnSignCompleted;   // jutsu name, sign index
     public UnityEvent<string> OnJutsuCompleted;
     public UnityEvent<string> OnSequenceReset;
+    [Tooltip("jutsu name, cost, current chakra")]
+    public UnityEvent<string, float, float> OnNotEnoughChakra;
 
     private int _currentJutsuIndex = 0;
     private bool _detecting = false;
@@ -84,10 +96,33 @@ public class JutsuManager : MonoBehaviour
     public void BeginDetection()
     {
         if (CurrentJutsu == null || CurrentJutsu.signs.Count == 0) return;
+
+        JutsuDefinition jutsu = CurrentJutsu;
+
+        // Chakra gate: refuse to start if the player can't pay for it.
+        if (chakra != null && jutsu.chakraCost > 0f && !chakra.CanAfford(jutsu.chakraCost))
+        {
+            OnNotEnoughChakra?.Invoke(jutsu.jutsuName, jutsu.chakraCost, chakra.Current);
+            return;
+        }
+
+        if (spendOnStart && chakra != null)
+        {
+            chakra.Spend(jutsu.chakraCost);
+        }
+
         ResetSequence(fireEvent: false);
         _detectionElapsed = 0f;
         _detecting = true;
-        OnDetectionStarted?.Invoke(CurrentJutsu.jutsuName);
+        OnDetectionStarted?.Invoke(jutsu.jutsuName);
+    }
+
+    /// <summary>True if the current jutsu can be started right now (chakra-wise).</summary>
+    public bool CanCastCurrent()
+    {
+        if (CurrentJutsu == null) return false;
+        if (chakra == null || CurrentJutsu.chakraCost <= 0f) return true;
+        return chakra.CanAfford(CurrentJutsu.chakraCost);
     }
 
     public void StopDetection()
@@ -167,6 +202,19 @@ public class JutsuManager : MonoBehaviour
 
         if (nextIndex >= jutsu.signs.Count)
         {
+            // Pay on completion. If chakra ran out mid-sequence (e.g. drained by
+            // something else), treat it as a fizzle rather than a free cast.
+            if (!spendOnStart && chakra != null && jutsu.chakraCost > 0f)
+            {
+                if (!chakra.Spend(jutsu.chakraCost))
+                {
+                    OnNotEnoughChakra?.Invoke(jutsu.jutsuName, jutsu.chakraCost, chakra.Current);
+                    ResetSequence(fireEvent: true);
+                    if (requireActivation) _detecting = false;
+                    return;
+                }
+            }
+
             OnJutsuCompleted?.Invoke(jutsu.jutsuName);
             ResetSequence(fireEvent: false);
             if (requireActivation)
