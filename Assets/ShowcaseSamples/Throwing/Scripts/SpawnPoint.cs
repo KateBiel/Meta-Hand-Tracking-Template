@@ -30,10 +30,10 @@ namespace Meta.XR.InteractionSDK.Samples
             TryGetComponent(out _grabbable);
             _swapTargets = FindObjectOfType<SwapTargets>();
 
-            if (_swapTargets == null)
-            {
-                Debug.LogError("No SwapTargets component in scene!");
-            }
+            //if (_swapTargets == null)
+           // {
+               // Debug.LogError("No SwapTargets component in scene!");
+            //}
         }
 
         private void Start()

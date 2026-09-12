@@ -1,47 +1,52 @@
 using System.Collections;
 using UnityEngine;
+using Oculus.Interaction;
 
 /// <summary>
-/// Drives the Meta hand material's outline from chakra level.
-/// Put one on each hand (or one with both renderers assigned).
-/// Uses MaterialPropertyBlock so the shared hand material asset is never edited.
-///
-/// Writes happen in LateUpdate (not Update) so this always wins against other
-/// scripts that write their own property block during Update() - e.g. Meta's
-/// MaterialPropertyBlockEditor with "Update Every Frame" checked, which
-/// otherwise silently overwrites these values later in the same frame.
+/// Drives the Meta hand material's outline per hand:
+///   - idle: no outline (idleColor)
+///   - one hand holding the charge sign: that hand shows singleHandColor
+///   - both hands (ChakraSystem.IsCharging): both show the charging color, scaled by chakra level
+///   - cast / denied flashes on top
+/// Writes happen in LateUpdate so they win against Meta's MaterialPropertyBlockEditor.
 /// </summary>
 public class ChakraHandGlow : MonoBehaviour
 {
     [SerializeField] private ChakraSystem chakra;
     [SerializeField] private JutsuManager jutsuManager;
 
-    [Tooltip("The SkinnedMeshRenderers of the hand visuals (l_handMeshNode / r_handMeshNode).")]
-    [SerializeField] private SkinnedMeshRenderer[] handRenderers;
+    [Header("Hands")]
+    [SerializeField] private SkinnedMeshRenderer leftHandRenderer;   // LeftHand
+    [SerializeField] private SkinnedMeshRenderer rightHandRenderer;  // RightHand
+    [Tooltip("ChakraChargeL — the left hand's own ActiveStateGroup for the charge sign.")]
+    [SerializeField] private ActiveStateGroup leftChargeSign;
+    [Tooltip("ChakraChargeR — the right hand's own ActiveStateGroup for the charge sign.")]
+    [SerializeField] private ActiveStateGroup rightChargeSign;
 
     [Header("Shader properties (Meta OculusHand)")]
     [SerializeField] private string outlineColorProperty = "_OutlineColor";
     [SerializeField] private string outlineWidthProperty = "_OutlineWidth";
 
-    [Header("Visibility")]
-    [Tooltip("If true, the outline only shows while charging (and briefly on cast/denied flashes). Otherwise it always reflects chakra level.")]
-    [SerializeField] private bool showOnlyWhileCharging = true;
-
-    [Tooltip("Seconds to fade the outline in/out when charging starts/stops.")]
-    [SerializeField] private float chargeFadeTime = 0.25f;
-
     [Header("Colors (HDR)")]
     [ColorUsage(true, true)] [SerializeField] private Color idleColor = new Color(0f, 0f, 0f, 0f);
+    [Tooltip("Shown on a hand that holds the sign while the other doesn't.")]
+    [ColorUsage(true, true)] [SerializeField] private Color singleHandColor = new Color(0.6f, 0.9f, 1f);
     [ColorUsage(true, true)] [SerializeField] private Color fullColor = new Color(0f, 2f, 3f);
     [ColorUsage(true, true)] [SerializeField] private Color emptyColor = new Color(0.1f, 0.3f, 0.4f);
     [ColorUsage(true, true)] [SerializeField] private Color castFlashColor = new Color(2f, 4f, 6f);
     [ColorUsage(true, true)] [SerializeField] private Color deniedColor = new Color(4f, 0.2f, 0.2f);
 
     [Header("Width")]
+    [SerializeField] private float widthIdle = 0.0f;
+    [SerializeField] private float widthSingleHand = 0.0012f;
     [SerializeField] private float widthAtEmpty = 0.0008f;
     [SerializeField] private float widthAtFull = 0.0025f;
 
-    [Header("Low-chakra flicker")]
+    [Header("Transitions")]
+    [Tooltip("Seconds to fade between idle / single / charging states.")]
+    [SerializeField] private float fadeTime = 0.2f;
+
+    [Header("Low-chakra flicker (while charging)")]
     [Range(0f, 1f)] [SerializeField] private float flickerBelow = 0.25f;
     [SerializeField] private float flickerSpeed = 12f;
     [Range(0f, 1f)] [SerializeField] private float flickerAmount = 0.5f;
@@ -51,16 +56,16 @@ public class ChakraHandGlow : MonoBehaviour
     [SerializeField] private float deniedFlashDuration = 0.35f;
 
     private MaterialPropertyBlock _mpb;
-    private int _colorId;
-    private int _widthId;
-    private float _fill = 1f;
-    private Coroutine _flash;
+    private int _colorId, _widthId;
+    private float _fill;
 
-    // Computed each frame in Update()/FlashRoutine(), written to renderers in LateUpdate().
+    // per-hand smoothed state: 0 = idle, 1 = single-hand, 2 = charging
+    private float _leftState, _rightState;
+    private Color _leftColor, _rightColor;
+    private float _leftWidth, _rightWidth;
+
+    private Coroutine _flash;
     private bool _flashing;
-    private float _chargeBlend;     // 0 = idle, 1 = charging (smoothed)
-    private Color _restColor;
-    private float _restWidth;
     private Color _flashColor;
     private float _flashWidth;
 
@@ -95,57 +100,65 @@ public class ChakraHandGlow : MonoBehaviour
         }
     }
 
-    // Computes the resting (non-flash) color/width for this frame. Does NOT write to the renderer.
     private void Update()
     {
-        Color c = Color.Lerp(emptyColor, fullColor, _fill);
-        float w = Mathf.Lerp(widthAtEmpty, widthAtFull, _fill);
+        bool bothCharging = chakra != null && chakra.IsCharging;
+        bool leftSign = leftChargeSign != null && leftChargeSign.Active;
+        bool rightSign = rightChargeSign != null && rightChargeSign.Active;
 
+        float leftTarget = bothCharging ? 2f : (leftSign ? 1f : 0f);
+        float rightTarget = bothCharging ? 2f : (rightSign ? 1f : 0f);
+
+        float step = fadeTime > 0f ? Time.deltaTime / fadeTime : 2f;
+        _leftState = Mathf.MoveTowards(_leftState, leftTarget, step);
+        _rightState = Mathf.MoveTowards(_rightState, rightTarget, step);
+
+        // Charging color for this frame (shared by both hands)
+        Color chargeColor = Color.Lerp(emptyColor, fullColor, _fill);
+        float chargeWidth = Mathf.Lerp(widthAtEmpty, widthAtFull, _fill);
         if (_fill < flickerBelow)
         {
-            // dip the intensity with a fast noise so low chakra looks unstable
             float n = Mathf.PerlinNoise(Time.time * flickerSpeed, 0.37f);
-            float dip = 1f - flickerAmount * n;
-            c *= dip;
+            chargeColor *= 1f - flickerAmount * n;
         }
 
-        if (showOnlyWhileCharging)
+        Evaluate(_leftState, chargeColor, chargeWidth, out _leftColor, out _leftWidth);
+        Evaluate(_rightState, chargeColor, chargeWidth, out _rightColor, out _rightWidth);
+    }
+
+    // state 0..1 blends idle->single, 1..2 blends single->charging
+    private void Evaluate(float state, Color chargeColor, float chargeWidth, out Color color, out float width)
+    {
+        if (state <= 1f)
         {
-            bool charging = chakra != null && chakra.IsCharging;
-            float target = charging ? 1f : 0f;
-            float step = chargeFadeTime > 0f ? Time.deltaTime / chargeFadeTime : 1f;
-            _chargeBlend = Mathf.MoveTowards(_chargeBlend, target, step);
-
-            c = Color.Lerp(idleColor, c, _chargeBlend);
-            w = Mathf.Lerp(widthAtEmpty, w, _chargeBlend);
+            color = Color.Lerp(idleColor, singleHandColor, state);
+            width = Mathf.Lerp(widthIdle, widthSingleHand, state);
         }
-
-        _restColor = c;
-        _restWidth = w;
+        else
+        {
+            float t = state - 1f;
+            color = Color.Lerp(singleHandColor, chargeColor, t);
+            width = Mathf.Lerp(widthSingleHand, chargeWidth, t);
+        }
     }
 
     private void LateUpdate()
     {
         if (_flashing)
-            Apply(_flashColor, _flashWidth);
+        {
+            Apply(leftHandRenderer, _flashColor, _flashWidth);
+            Apply(rightHandRenderer, _flashColor, _flashWidth);
+        }
         else
-            Apply(_restColor, _restWidth);
+        {
+            Apply(leftHandRenderer, _leftColor, _leftWidth);
+            Apply(rightHandRenderer, _rightColor, _rightWidth);
+        }
     }
 
-    private void HandleChakraChanged(float current, float max)
-    {
-        _fill = max > 0f ? current / max : 0f;
-    }
-
-    private void HandleCast(string jutsuName)
-    {
-        StartFlash(castFlashColor, castFlashDuration);
-    }
-
-    private void HandleDenied(string jutsuName, float cost, float current)
-    {
-        StartFlash(deniedColor, deniedFlashDuration);
-    }
+    private void HandleChakraChanged(float current, float max) => _fill = max > 0f ? current / max : 0f;
+    private void HandleCast(string jutsuName) => StartFlash(castFlashColor, castFlashDuration);
+    private void HandleDenied(string jutsuName, float cost, float current) => StartFlash(deniedColor, deniedFlashDuration);
 
     private void StartFlash(Color color, float duration)
     {
@@ -153,7 +166,6 @@ public class ChakraHandGlow : MonoBehaviour
         _flash = StartCoroutine(FlashRoutine(color, duration));
     }
 
-    // Only computes the flash color/width per frame - LateUpdate does the actual write.
     private IEnumerator FlashRoutine(Color color, float duration)
     {
         _flashing = true;
@@ -161,27 +173,23 @@ public class ChakraHandGlow : MonoBehaviour
         while (t < duration)
         {
             t += Time.deltaTime;
-            float k = 1f - (t / duration);      // 1 -> 0
-            k = k * k;                           // ease out
-            Color rest = Color.Lerp(emptyColor, fullColor, _fill);
-            _flashColor = Color.Lerp(rest, color, k);
-            _flashWidth = widthAtFull;
+            float k = 1f - (t / duration);
+            k *= k;
+            // fade back toward whatever the hands would otherwise show (use left as reference)
+            _flashColor = Color.Lerp(_leftColor, color, k);
+            _flashWidth = Mathf.Lerp(_leftWidth, widthAtFull, k);
             yield return null;
         }
         _flashing = false;
         _flash = null;
     }
 
-    private void Apply(Color color, float width)
+    private void Apply(SkinnedMeshRenderer r, Color color, float width)
     {
-        for (int i = 0; i < handRenderers.Length; i++)
-        {
-            var r = handRenderers[i];
-            if (r == null) continue;
-            r.GetPropertyBlock(_mpb);
-            _mpb.SetColor(_colorId, color);
-            _mpb.SetFloat(_widthId, width);
-            r.SetPropertyBlock(_mpb);
-        }
+        if (r == null) return;
+        r.GetPropertyBlock(_mpb);
+        _mpb.SetColor(_colorId, color);
+        _mpb.SetFloat(_widthId, width);
+        r.SetPropertyBlock(_mpb);
     }
 }
