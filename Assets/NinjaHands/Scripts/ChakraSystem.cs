@@ -2,35 +2,37 @@ using UnityEngine;
 using UnityEngine.Events;
 
 /// <summary>
-/// Player chakra pool. One instance per player.
-/// JutsuManager checks CanAfford() before detection and calls Spend() on completion.
+/// Player chakra pool. Starts at 0, fills only while charging (held charge pose),
+/// never decays on its own. JutsuManager spends from it.
 /// </summary>
 public class ChakraSystem : MonoBehaviour
 {
     [SerializeField] private float maxChakra = 100f;
-    [SerializeField] private float startChakra = 100f;
+    [SerializeField] private float startChakra = 0f;
 
-    [Tooltip("Chakra regained per second while not casting. 0 = no regen.")]
-    [SerializeField] private float regenPerSecond = 5f;
-
-    [Tooltip("Seconds after spending before regen resumes.")]
-    [SerializeField] private float regenDelay = 2f;
+    [Header("Charging")]
+    [Tooltip("Chakra gained per second while charging. 25 = 4 seconds from empty to full.")]
+    [SerializeField] private float chargePerSecond = 25f;
 
     [Header("Events")]
-    [Tooltip("current, max — fires whenever the value changes. Drive bars / outline glow from this.")]
+    [Tooltip("current, max — fires whenever the value changes.")]
     public UnityEvent<float, float> OnChakraChanged;
     public UnityEvent<float> OnChakraSpent;   // amount spent
     public UnityEvent OnChakraEmpty;
     public UnityEvent OnChakraFull;
+    public UnityEvent OnChargingStarted;
+    public UnityEvent OnChargingStopped;
 
     private float _current;
-    private float _regenCooldown;
+    private bool _charging;
     private bool _wasFull;
     private bool _wasEmpty;
 
     public float Current => _current;
     public float Max => maxChakra;
     public float Normalized => maxChakra > 0f ? _current / maxChakra : 0f;
+    public bool IsCharging => _charging;
+    public bool IsFull => _current >= maxChakra;
 
     private void Awake()
     {
@@ -46,15 +48,17 @@ public class ChakraSystem : MonoBehaviour
 
     private void Update()
     {
-        if (regenPerSecond <= 0f || _current >= maxChakra) return;
+        if (!_charging || chargePerSecond <= 0f || _current >= maxChakra) return;
+        SetChakra(_current + chargePerSecond * Time.deltaTime);
+    }
 
-        if (_regenCooldown > 0f)
-        {
-            _regenCooldown -= Time.deltaTime;
-            return;
-        }
-
-        SetChakra(_current + regenPerSecond * Time.deltaTime);
+    /// <summary>Called by ChakraCharger every frame with the charge-pose state.</summary>
+    public void SetCharging(bool charging)
+    {
+        if (charging == _charging) return;
+        _charging = charging;
+        if (_charging) OnChargingStarted?.Invoke();
+        else OnChargingStopped?.Invoke();
     }
 
     public bool CanAfford(float cost) => _current >= cost;
@@ -64,15 +68,14 @@ public class ChakraSystem : MonoBehaviour
     {
         if (cost <= 0f) return true;
         if (!CanAfford(cost)) return false;
-
         SetChakra(_current - cost);
-        _regenCooldown = regenDelay;
         OnChakraSpent?.Invoke(cost);
         return true;
     }
 
     public void Restore(float amount) => SetChakra(_current + amount);
     public void RestoreFull() => SetChakra(maxChakra);
+    public void Clear() => SetChakra(0f);
 
     private void SetChakra(float value)
     {
@@ -84,10 +87,8 @@ public class ChakraSystem : MonoBehaviour
 
         bool isEmpty = _current <= 0f;
         bool isFull = _current >= maxChakra;
-
         if (isEmpty && !_wasEmpty) OnChakraEmpty?.Invoke();
         if (isFull && !_wasFull) OnChakraFull?.Invoke();
-
         _wasEmpty = isEmpty;
         _wasFull = isFull;
     }
