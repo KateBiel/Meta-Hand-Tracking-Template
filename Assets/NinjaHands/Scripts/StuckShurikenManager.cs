@@ -1,19 +1,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-/// <summary>
-/// Tracks every currently-stuck shuriken across the whole scene. Once more
-/// than maxStuck are stuck at once, the oldest one dissolves automatically.
-/// Add this to a single persistent object (e.g. a "Managers" GameObject).
-/// </summary>
 public class StuckShurikenManager : MonoBehaviour
 {
     public static StuckShurikenManager Instance { get; private set; }
 
-    [Tooltip("Maximum shuriken allowed stuck at once, globally, before the oldest dissolves.")]
+    [Tooltip("Total shuriken allowed to exist at once (spawned + held + thrown + stuck).")]
+    public int maxActive = 5;
+
+    [Tooltip("Max shuriken allowed stuck at once before the oldest dissolves.")]
     public int maxStuck = 5;
 
+    readonly HashSet<ShurikenHitDetector> activeShuriken = new HashSet<ShurikenHitDetector>();
     readonly Queue<ShurikenHitDetector> stuckOrder = new Queue<ShurikenHitDetector>();
+
+    public int ActiveCount => activeShuriken.Count;
 
     void Awake()
     {
@@ -25,10 +26,16 @@ public class StuckShurikenManager : MonoBehaviour
         Instance = this;
     }
 
-    /// <summary>
-    /// Call when a shuriken sticks to any surface. Dissolves the oldest one
-    /// if this push puts the count over the limit.
-    /// </summary>
+    public void RegisterActive(ShurikenHitDetector shuriken)
+    {
+        activeShuriken.Add(shuriken);
+    }
+
+    public void UnregisterActive(ShurikenHitDetector shuriken)
+    {
+        activeShuriken.Remove(shuriken);
+    }
+
     public void RegisterStuck(ShurikenHitDetector shuriken)
     {
         stuckOrder.Enqueue(shuriken);
@@ -43,15 +50,10 @@ public class StuckShurikenManager : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Call if a stuck shuriken is removed some other way (e.g. manually reset,
-    /// pooled/respawned) so it doesn't linger as a stale reference in the queue.
-    /// </summary>
     public void UnregisterStuck(ShurikenHitDetector shuriken)
     {
         if (!stuckOrder.Contains(shuriken)) return;
 
-        // Queue<T> has no direct remove - rebuild without the target entry.
         Queue<ShurikenHitDetector> rebuilt = new Queue<ShurikenHitDetector>();
         foreach (var s in stuckOrder)
         {
