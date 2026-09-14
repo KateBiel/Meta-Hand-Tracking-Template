@@ -184,6 +184,7 @@ public class JutsuDamageController : MonoBehaviour
         {
             endPoint = hit.point;
 
+
             IHittable hittable = hit.collider.GetComponentInParent<IHittable>();
             if (hittable != null)
             {

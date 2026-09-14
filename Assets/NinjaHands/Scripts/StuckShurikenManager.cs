@@ -11,10 +11,14 @@ public class StuckShurikenManager : MonoBehaviour
     [Tooltip("Max shuriken allowed stuck at once before the oldest dissolves.")]
     public int maxStuck = 5;
 
+    [Header("Debug")]
+    public bool logRegistration = true;
+
     readonly HashSet<ShurikenHitDetector> activeShuriken = new HashSet<ShurikenHitDetector>();
     readonly Queue<ShurikenHitDetector> stuckOrder = new Queue<ShurikenHitDetector>();
 
     public int ActiveCount => activeShuriken.Count;
+    public int StuckCount => stuckOrder.Count;
 
     void Awake()
     {
@@ -29,22 +33,26 @@ public class StuckShurikenManager : MonoBehaviour
     public void RegisterActive(ShurikenHitDetector shuriken)
     {
         activeShuriken.Add(shuriken);
+        if (logRegistration) Debug.Log($"[StuckShurikenManager] Active registered. Active count: {activeShuriken.Count}");
     }
 
     public void UnregisterActive(ShurikenHitDetector shuriken)
     {
         activeShuriken.Remove(shuriken);
+        if (logRegistration) Debug.Log($"[StuckShurikenManager] Active unregistered. Active count: {activeShuriken.Count}");
     }
 
     public void RegisterStuck(ShurikenHitDetector shuriken)
     {
         stuckOrder.Enqueue(shuriken);
+        if (logRegistration) Debug.Log($"[StuckShurikenManager] Stuck registered. Stuck count: {stuckOrder.Count}/{maxStuck}");
 
         if (stuckOrder.Count > maxStuck)
         {
             ShurikenHitDetector oldest = stuckOrder.Dequeue();
             if (oldest != null)
             {
+                if (logRegistration) Debug.Log($"[StuckShurikenManager] Over limit - dissolving oldest: {oldest.name}");
                 oldest.Dissolve();
             }
         }
@@ -61,5 +69,28 @@ public class StuckShurikenManager : MonoBehaviour
         }
         stuckOrder.Clear();
         foreach (var s in rebuilt) stuckOrder.Enqueue(s);
+    }
+
+    /// <summary>
+    /// Destroys every currently tracked shuriken instantly (no dissolve
+    /// animation) - used when switching levels so nothing carries over.
+    /// </summary>
+    public void ClearAll()
+    {
+        if (logRegistration) Debug.Log($"[StuckShurikenManager] ClearAll - destroying {activeShuriken.Count} shuriken");
+
+        // Copy to a list first since destroying will trigger OnDisable ->
+        // UnregisterActive, which would otherwise modify the set mid-iteration.
+        var toDestroy = new List<ShurikenHitDetector>(activeShuriken);
+        foreach (var s in toDestroy)
+        {
+            if (s != null)
+            {
+                Destroy(s.gameObject);
+            }
+        }
+
+        activeShuriken.Clear();
+        stuckOrder.Clear();
     }
 }

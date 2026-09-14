@@ -15,13 +15,13 @@ public class ShurikenHitDetector : MonoBehaviour
     public AudioClip defaultStickSound;
 
     [Header("Dissolve")]
-    [Tooltip("How long the shrink-away dissolve takes once this shuriken is bumped out by the limit.")]
     public float dissolveDuration = 0.5f;
 
     [Header("Debug")]
     public bool logHits = false;
 
     bool hasHitThisThrow = false;
+    bool isDeflectedAndFalling = false;
     Rigidbody rb;
 
     void Awake()
@@ -29,9 +29,38 @@ public class ShurikenHitDetector : MonoBehaviour
         rb = GetComponent<Rigidbody>();
     }
 
+    void OnEnable()
+    {
+        StuckShurikenManager.Instance?.RegisterActive(this);
+    }
+
+    void OnDisable()
+    {
+        StuckShurikenManager.Instance?.UnregisterActive(this);
+    }
+
     void OnCollisionEnter(Collision collision)
     {
-        if (hasHitThisThrow) return;
+        if (hasHitThisThrow)
+        {
+            // Already deflected and falling - freeze it in place on the next
+            // thing it touches (the floor).
+            if (isDeflectedAndFalling)
+            {
+                FreezeOnFloor();
+            }
+            return;
+        }
+
+        // Blocked by kunai - knock away and let it fall. KunaiBlockAudio
+        // handles the block sound independently, playing from the kunai itself.
+        if (collision.collider.GetComponentInParent<KunaiItem>() != null)
+        {
+            hasHitThisThrow = true;
+            DeflectAndFall(collision);
+            return;
+        }
+
         hasHitThisThrow = true;
 
         ContactPoint contact = collision.contactCount > 0 ? collision.GetContact(0) : default;
@@ -66,6 +95,32 @@ public class ShurikenHitDetector : MonoBehaviour
         }
     }
 
+    void DeflectAndFall(Collision collision)
+    {
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        isDeflectedAndFalling = true;
+
+        Vector3 knockback = -collision.relativeVelocity.normalized * 1.5f;
+        rb.linearVelocity = knockback;
+
+        Destroy(gameObject, 4f);
+    }
+
+    void FreezeOnFloor()
+    {
+        rb.isKinematic = true;
+        rb.linearVelocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+        isDeflectedAndFalling = false;
+
+        ShurikenSpin spin = GetComponent<ShurikenSpin>();
+        if (spin != null)
+        {
+            spin.enabled = false;
+        }
+    }
+
     void StickToSurface(Transform surface, Vector3 hitPoint, Vector3 hitNormal)
     {
         rb.isKinematic = true;
@@ -94,12 +149,18 @@ public class ShurikenHitDetector : MonoBehaviour
 
     /// <summary>
     /// Called by StuckShurikenManager when this shuriken ages out past the
-    /// global stuck limit. Shrinks it away, then deactivates.
-    /// TODO: swap the shrink-to-zero for a real dissolve shader effect if/when
-    /// one is added - this is a placeholder that works with any material.
+    /// global stuck limit. Shrinks it away, then deactivates. If already
+    /// inactive (e.g. its level was hidden), skips the coroutine entirely
+    /// since Unity can't start coroutines on inactive GameObjects.
     /// </summary>
     public void Dissolve()
     {
+        if (!gameObject.activeInHierarchy)
+        {
+            gameObject.SetActive(false);
+            return;
+        }
+
         StartCoroutine(DissolveRoutine());
     }
 
@@ -116,12 +177,12 @@ public class ShurikenHitDetector : MonoBehaviour
         }
 
         gameObject.SetActive(false);
-        // Or Destroy(gameObject) if this isn't pooled.
     }
 
     public void ResetForNewThrow()
     {
         hasHitThisThrow = false;
+        isDeflectedAndFalling = false;
         rb.isKinematic = false;
         transform.localScale = Vector3.one;
         transform.SetParent(null);

@@ -16,6 +16,7 @@ public enum HitSource
 {
     Shuriken,
     Jutsu,
+    Kunai,
     Other
 }
 

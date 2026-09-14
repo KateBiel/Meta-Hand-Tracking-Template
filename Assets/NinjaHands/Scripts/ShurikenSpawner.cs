@@ -1,12 +1,6 @@
 using System.Collections;
 using UnityEngine;
 
-/// <summary>
-/// Keeps exactly one ungrabbed shuriken sitting at spawnPoint at all times.
-/// The moment it's grabbed, spawns the next one - unless the global active
-/// cap (ShurikenManager.maxActive) is reached, in which case it retries
-/// periodically until a slot frees up.
-/// </summary>
 public class ShurikenSpawner : MonoBehaviour
 {
     public Transform spawnPoint;
@@ -19,6 +13,18 @@ public class ShurikenSpawner : MonoBehaviour
     void Start()
     {
         TrySpawn();
+    }
+
+    void Update()
+    {
+        // Self-healing: if the waiting shuriken vanished for any reason
+        // (grabbed via NotifyGrabbed, or destroyed externally e.g. by
+        // StuckShurikenManager.ClearAll on a level switch), notice it here
+        // and spawn a fresh one, instead of relying only on NotifyGrabbed.
+        if (currentWaiting == null && retryRoutine == null)
+        {
+            TrySpawn();
+        }
     }
 
     public void NotifyGrabbed()
