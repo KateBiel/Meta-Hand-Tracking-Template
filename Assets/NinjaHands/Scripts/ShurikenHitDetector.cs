@@ -10,6 +10,10 @@ public class ShurikenHitDetector : MonoBehaviour
     [Header("Sticking")]
     public float embedDepth = 0.02f;
 
+    [Header("Ground")]
+    [Tooltip("Tag used to identify the floor/ground. On contact, the shuriken freezes completely in place - no embedding, no parenting.")]
+    public string groundTag = "Ground";
+
     [Header("Audio")]
     public AudioSource audioSource;
     public AudioClip defaultStickSound;
@@ -43,21 +47,35 @@ public class ShurikenHitDetector : MonoBehaviour
     {
         if (hasHitThisThrow)
         {
-            // Already deflected and falling - freeze it in place on the next
-            // thing it touches (the floor).
+            // Already deflected and falling (post-kunai-block) - freeze it in
+            // place on the next thing it touches, unchanged behavior.
             if (isDeflectedAndFalling)
             {
-                FreezeOnFloor();
+                FreezeInPlace();
             }
             return;
         }
 
-        // Blocked by kunai - knock away and let it fall. KunaiBlockAudio
-        // handles the block sound independently, playing from the kunai itself.
+        // Blocked by kunai - knock away and let it fall. Unchanged.
         if (collision.collider.GetComponentInParent<KunaiItem>() != null)
         {
             hasHitThisThrow = true;
             DeflectAndFall(collision);
+            return;
+        }
+
+        // Hits the ground - stop dead instantly, no embedding, no parenting,
+        // no IHittable/damage logic (ground isn't a valid damage target anyway).
+        if (collision.collider.CompareTag(groundTag))
+        {
+            hasHitThisThrow = true;
+            PlayStickSound(collision.collider);
+            FreezeInPlace();
+
+            if (logHits)
+            {
+                Debug.Log($"Shuriken hit ground ({collision.collider.name}) - froze in place.");
+            }
             return;
         }
 
@@ -107,7 +125,7 @@ public class ShurikenHitDetector : MonoBehaviour
         Destroy(gameObject, 4f);
     }
 
-    void FreezeOnFloor()
+    void FreezeInPlace()
     {
         rb.isKinematic = true;
         rb.linearVelocity = Vector3.zero;
@@ -147,12 +165,6 @@ public class ShurikenHitDetector : MonoBehaviour
         }
     }
 
-    /// <summary>
-    /// Called by StuckShurikenManager when this shuriken ages out past the
-    /// global stuck limit. Shrinks it away, then deactivates. If already
-    /// inactive (e.g. its level was hidden), skips the coroutine entirely
-    /// since Unity can't start coroutines on inactive GameObjects.
-    /// </summary>
     public void Dissolve()
     {
         if (!gameObject.activeInHierarchy)
