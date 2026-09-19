@@ -28,6 +28,9 @@ TagManager:
   - Bouncable
   - Target
   - Grabbable
+  - FxTemporaire
+  - Backboard
+  - Ground
   layers:
   - Default
   - TransparentFX
