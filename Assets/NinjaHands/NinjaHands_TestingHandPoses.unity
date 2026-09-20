@@ -24580,6 +24580,72 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 5792833594233233152, guid: dc0992b1665af9548996ae6d0807dbed, type: 3}
   m_PrefabInstance: {fileID: 557166237}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &1471617028
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1471617030}
+  - component: {fileID: 1471617029}
+  m_Layer: 0
+  m_Name: HandPoseGuideVisual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1471617029
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1471617028}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c57c6a4ca4dc449a8ba7898b31af73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: '::'
+  chakra: {fileID: 1851839673}
+  realLeftHand: {fileID: 4908987635578531524}
+  realRightHand: {fileID: 1846671257513366125}
+  guideLeftHand: {fileID: 1803371197}
+  guideRightHand: {fileID: 1612240666}
+  guideRenderers:
+  - {fileID: 1803371199}
+  - {fileID: 1612240668}
+  chakraEmptyThreshold: 5
+  handDistanceThreshold: 0.2
+  debounceTime: 0.15
+  outlineColor: {r: 0.9911022, g: 0.70837605, b: 0.14126332, a: 1}
+  minOutlineWidth: 0.0008
+  maxOutlineWidth: 0.0025
+  pulseSpeed: 2
+  maxBaseOpacity: 0.5
+  maxOutlineOpacity: 1
+  opacityProperty: _Opacity
+  outlineColorProperty: _OutlineColor
+  outlineWidthProperty: _OutlineWidth
+  outlineOpacityProperty: _OutlineOpacity
+  fadeOutDuration: 0.4
+--- !u!4 &1471617030
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1471617028}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1498626112
 GameObject:
   m_ObjectHideFlags: 0
@@ -25873,6 +25939,16 @@ MonoBehaviour:
   _whenSelectingInteractorViewRemoved:
     m_PersistentCalls:
       m_Calls: []
+--- !u!4 &1612240666 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1320206989542447650, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+  m_PrefabInstance: {fileID: 1951930215}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &1612240668 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 6650189922909158970, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+  m_PrefabInstance: {fileID: 1951930215}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1623294136
 GameObject:
   m_ObjectHideFlags: 0
@@ -27729,6 +27805,16 @@ Transform:
   m_Children: []
   m_Father: {fileID: 139581222}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!4 &1803371197 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 8000766237426465813, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+  m_PrefabInstance: {fileID: 1951930215}
+  m_PrefabAsset: {fileID: 0}
+--- !u!137 &1803371199 stripped
+SkinnedMeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 7021690960323113812, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+  m_PrefabInstance: {fileID: 1951930215}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1815653550
 GameObject:
   m_ObjectHideFlags: 0
@@ -29393,6 +29479,14 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 0.942
       objectReference: {fileID: 0}
+    - target: {fileID: 6650189922909158970, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 4db2037ea07d1e34c9dc7afaa7078413, type: 2}
+    - target: {fileID: 7021690960323113812, guid: 57d90ad93d415314498b77598f62737b, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 4db2037ea07d1e34c9dc7afaa7078413, type: 2}
     - target: {fileID: 7841949563511827662, guid: 57d90ad93d415314498b77598f62737b, type: 3}
       propertyPath: m_Name
       value: Jutsu_ChakraCharger_BothHands_Visual (1)
@@ -152546,3 +152640,4 @@ SceneRoots:
   - {fileID: 1951930215}
   - {fileID: 1702856582}
   - {fileID: 1711172741690296514}
+  - {fileID: 1471617030}
