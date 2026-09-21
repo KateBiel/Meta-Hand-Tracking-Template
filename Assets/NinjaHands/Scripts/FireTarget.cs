@@ -5,11 +5,13 @@ public class FireTarget : MonoBehaviour
     public GameObject targetPrefab;
     public Transform spawnPoint;
     public float height = 2;
-    [Tooltip("1 = normal launch speed. Lower = slower rise, but note: reducing speed without changing height means it won't fully reach 'height' anymore, since less initial velocity under the same gravity peaks lower.")]
-    public float launchSpeedMultiplier = 1f;
+    [Tooltip("1 = real gravity, normal speed. Lower (e.g. 0.3) = slower rise AND fall, while still reaching the exact same 'height' peak.")]
+    [Range(0.05f, 1f)] public float gravityScale = 1f;
 
     private GameObject spawned;
     private Canvas spawnedCanvas;
+    private Rigidbody spawnedRb;
+    private float scaledGravity;
 
     public void Spawn()
     {
@@ -19,8 +21,11 @@ public class FireTarget : MonoBehaviour
         Vector3 lookCamera = Vector3.ProjectOnPlane(targetCamera, Vector3.up);
         spawned.transform.forward = -lookCamera.normalized;
 
-        Rigidbody rb = spawned.GetComponent<Rigidbody>();
-        rb.linearVelocity = Vector3.up * Mathf.Sqrt(2f * height * -Physics.gravity.y) * launchSpeedMultiplier;
+        spawnedRb = spawned.GetComponent<Rigidbody>();
+        spawnedRb.useGravity = false; // we apply our own scaled gravity in FixedUpdate instead
+
+        scaledGravity = -Physics.gravity.y * gravityScale;
+        spawnedRb.linearVelocity = Vector3.up * Mathf.Sqrt(2f * height * scaledGravity);
 
         // Find the target's UI canvas (health bar) so we can keep it hidden
         // while the target is still below the portal opening, in sync with
@@ -30,6 +35,12 @@ public class FireTarget : MonoBehaviour
         {
             spawnedCanvas.gameObject.SetActive(false);
         }
+    }
+
+    void FixedUpdate()
+    {
+        if (spawnedRb == null) return;
+        spawnedRb.AddForce(Vector3.down * scaledGravity, ForceMode.Acceleration);
     }
 
     void Update()
@@ -51,5 +62,6 @@ public class FireTarget : MonoBehaviour
         Destroy(spawned);
         spawned = null;
         spawnedCanvas = null;
+        spawnedRb = null;
     }
 }
