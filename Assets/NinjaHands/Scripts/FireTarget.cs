@@ -5,13 +5,16 @@ public class FireTarget : MonoBehaviour
     public GameObject targetPrefab;
     public Transform spawnPoint;
     public float height = 2;
-    [Tooltip("1 = real gravity, normal speed. Lower (e.g. 0.3) = slower rise AND fall, while still reaching the exact same 'height' peak.")]
+    [Tooltip("1 = real gravity, normal speed. Lower (e.g. 0.3) = slower rise, while still reaching the exact same 'height' peak.")]
     [Range(0.05f, 1f)] public float gravityScale = 1f;
 
     private GameObject spawned;
     private Canvas spawnedCanvas;
     private Rigidbody spawnedRb;
+
+    private float verticalVelocity;
     private float scaledGravity;
+    private bool isRising;
 
     public void Spawn()
     {
@@ -22,14 +25,13 @@ public class FireTarget : MonoBehaviour
         spawned.transform.forward = -lookCamera.normalized;
 
         spawnedRb = spawned.GetComponent<Rigidbody>();
-        spawnedRb.useGravity = false; // we apply our own scaled gravity in FixedUpdate instead
+        spawnedRb.useGravity = false;
+        spawnedRb.isKinematic = true; // immune to any collision force — hits still register, but never push/spin it
 
         scaledGravity = -Physics.gravity.y * gravityScale;
-        spawnedRb.linearVelocity = Vector3.up * Mathf.Sqrt(2f * height * scaledGravity);
+        verticalVelocity = Mathf.Sqrt(2f * height * scaledGravity);
+        isRising = true;
 
-        // Find the target's UI canvas (health bar) so we can keep it hidden
-        // while the target is still below the portal opening, in sync with
-        // the stencil mask hiding the mesh itself.
         spawnedCanvas = spawned.GetComponentInChildren<Canvas>(true);
         if (spawnedCanvas != null)
         {
@@ -39,17 +41,17 @@ public class FireTarget : MonoBehaviour
 
     void FixedUpdate()
     {
-        if (spawnedRb == null) return;
-        spawnedRb.AddForce(Vector3.down * scaledGravity, ForceMode.Acceleration);
+        if (spawnedRb == null || !isRising) return;
+
+        verticalVelocity -= scaledGravity * Time.fixedDeltaTime;
+        Vector3 newPos = spawnedRb.position + Vector3.up * (verticalVelocity * Time.fixedDeltaTime);
+        spawnedRb.MovePosition(newPos);
     }
 
     void Update()
     {
-        if (spawned == null || spawnedCanvas == null) return;
+        if (spawned == null || spawnedCanvas == null || !isRising) return;
 
-        // Portal plane = spawnPoint's own height. Show the UI only once the
-        // target has actually risen above that point, matching the moment
-        // it visually clears the portal mask.
         bool aboveThreshold = spawned.transform.position.y > spawnPoint.position.y;
         if (spawnedCanvas.gameObject.activeSelf != aboveThreshold)
         {
@@ -59,9 +61,10 @@ public class FireTarget : MonoBehaviour
 
     public void Despawn()
     {
-        Destroy(spawned);
+        if (spawned != null) Destroy(spawned);
         spawned = null;
         spawnedCanvas = null;
         spawnedRb = null;
+        isRising = false;
     }
 }

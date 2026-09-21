@@ -55,13 +55,14 @@ MonoBehaviour:
   outerHitFraction: 0.5
   healthBar: {fileID: 8064133847518122495}
   hitCollider: {fileID: 5103094665744614948}
+  uiRoot: {fileID: 9043484092324674090}
   audioSource: {fileID: 7452936941964991015}
   hitSound: {fileID: 8300000, guid: b4f50d2045d1b6b4ea7f3ea6522a019b, type: 3}
   jutsuHitSound: {fileID: 8300000, guid: cf33ef465180f79458dec170317607d3, type: 3}
   defeatSound: {fileID: 8300000, guid: 864ffea12ae941249aeccdffc4a8eb45, type: 3}
   defeatSmokeVFXPrefab: {fileID: 3131354965952088720, guid: d944a324d3dc24f45b42d3e89fc7a2b6, type: 3}
   defeatPoofSound: {fileID: 8300000, guid: c2c7618e84e3b9548bb5aa1a183105e3, type: 3}
-  despawnDelay: 0
+  despawnDelay: 0.4
   isDefeated: 0
 --- !u!54 &6793501543101647674
 Rigidbody:

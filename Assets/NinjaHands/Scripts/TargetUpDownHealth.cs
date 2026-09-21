@@ -21,6 +21,8 @@ public class TargetUpDownHealth : MonoBehaviour, IHittable
     [Header("References")]
     public ThreeColorHealthBar healthBar;
     public Collider hitCollider;
+    [Tooltip("The target's UI Canvas (health bar) — hidden/shown alongside the mesh, since Canvas elements aren't Renderers and won't be caught automatically.")]
+    public GameObject uiRoot;
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -33,8 +35,8 @@ public class TargetUpDownHealth : MonoBehaviour, IHittable
     public AudioClip defeatPoofSound;
 
     [Header("Despawn")]
-    [Tooltip("Seconds to wait after the defeat VFX/sound before this object is destroyed, in place.")]
-    public float despawnDelay = 1f;
+    [Tooltip("Minimum seconds before this object is destroyed. The actual wait is whichever is longer: this value, or the length of whichever defeat sound(s) are playing — so audio never gets cut off.")]
+    public float despawnDelay = 0.3f;
 
     [Header("Events")]
     public bool isDefeated = false;
@@ -133,15 +135,46 @@ public class TargetUpDownHealth : MonoBehaviour, IHittable
             audioSource.PlayOneShot(defeatSound);
         }
 
-        SpawnDefeatVFX();
-
-        StartCoroutine(DespawnAfterDelay());
+        StartCoroutine(DefeatSequence());
     }
 
-    private System.Collections.IEnumerator DespawnAfterDelay()
+    private System.Collections.IEnumerator DefeatSequence()
     {
-        yield return new WaitForSeconds(despawnDelay);
+        // Hide immediately for anything already parented...
+        SetVisible(false);
+
+        // ...then wait one frame and sweep again, to catch a shuriken that finishes
+        // parenting onto us via StickToSurface() AFTER OnHit() returns, in this
+        // same collision event — same frame, just later in the call stack.
+        yield return null;
+        SetVisible(false);
+
+        SpawnDefeatVFX();
+
+        // Wait long enough for whichever defeat sound is actually playing to
+        // finish, so Destroy() doesn't cut it off mid-clip. Everything is
+        // already invisible from SetVisible(false) above, so this extra wait
+        // has zero visual effect — it only protects the audio.
+        float soundLength = 0f;
+        if (defeatSound != null) soundLength = Mathf.Max(soundLength, defeatSound.length);
+        if (defeatPoofSound != null) soundLength = Mathf.Max(soundLength, defeatPoofSound.length);
+
+        float wait = Mathf.Max(despawnDelay, soundLength);
+        yield return new WaitForSeconds(wait);
         Destroy(gameObject);
+    }
+
+    private void SetVisible(bool visible)
+    {
+        foreach (var r in GetComponentsInChildren<Renderer>(true))
+        {
+            r.enabled = visible;
+        }
+
+        if (uiRoot != null)
+        {
+            uiRoot.SetActive(visible);
+        }
     }
 
     private void SpawnDefeatVFX()
@@ -166,6 +199,7 @@ public class TargetUpDownHealth : MonoBehaviour, IHittable
         isDefeated = false;
         if (hitCollider != null) hitCollider.enabled = true;
         if (healthBar != null) healthBar.SetHealth(current, maxHealth);
+        SetVisible(true);
     }
 
     [ContextMenu("Force Defeat (Test)")]
