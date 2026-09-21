@@ -26,7 +26,7 @@ public class LevelManager : MonoBehaviour
 
     [Header("Editor Preview")]
     [Tooltip("Drag to preview a level directly in the Inspector, in Edit Mode or Play Mode.")]
-    [Range(0, 3)]
+    [Range(0, 5)]
     [SerializeField] private int previewSetIndex = 2;
 
     [Header("Never Hidden")]
@@ -72,6 +72,9 @@ public class LevelManager : MonoBehaviour
         foreach (var target in targetSets[_activeIndex].targets)
         {
             if (target == null) continue;
+
+            var t1 = target.GetComponentInChildren<Target1Health>(true);
+            if (t1 != null) t1.ResetHealth();
 
             var t3 = target.GetComponentInChildren<Target3Health>(true);
             if (t3 != null) t3.ResetHealth();

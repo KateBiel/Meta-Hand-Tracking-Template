@@ -72,17 +72,19 @@ public class StuckShurikenManager : MonoBehaviour
     }
 
     /// <summary>
-    /// Destroys every currently tracked shuriken instantly (no dissolve
-    /// animation) - used when switching levels so nothing carries over.
+    /// Destroys every ShurikenHitDetector currently in the scene, active or
+    /// inactive - used when switching levels so nothing carries over, including
+    /// shurikens that went inactive as a side effect of their parent target
+    /// being deactivated (which silently drops them from the tracked set).
     /// </summary>
     public void ClearAll()
     {
-        if (logRegistration) Debug.Log($"[StuckShurikenManager] ClearAll - destroying {activeShuriken.Count} shuriken");
+        var allShuriken = Object.FindObjectsByType<ShurikenHitDetector>(
+            FindObjectsInactive.Include, FindObjectsSortMode.None);
 
-        // Copy to a list first since destroying will trigger OnDisable ->
-        // UnregisterActive, which would otherwise modify the set mid-iteration.
-        var toDestroy = new List<ShurikenHitDetector>(activeShuriken);
-        foreach (var s in toDestroy)
+        if (logRegistration) Debug.Log($"[StuckShurikenManager] ClearAll - destroying {allShuriken.Length} shuriken (scene-wide sweep)");
+
+        foreach (var s in allShuriken)
         {
             if (s != null)
             {
@@ -93,4 +95,5 @@ public class StuckShurikenManager : MonoBehaviour
         activeShuriken.Clear();
         stuckOrder.Clear();
     }
+
 }

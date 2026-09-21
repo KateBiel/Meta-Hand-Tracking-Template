@@ -1014,8 +1014,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 30ae70f129133f24f88bc939dec95fd3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  damage: 10
+  damage: 20
   embedDepth: 0.02
+  groundTag: Ground
   audioSource: {fileID: 0}
   defaultStickSound: {fileID: 0}
   dissolveDuration: 0.5
