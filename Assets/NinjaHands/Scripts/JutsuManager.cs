@@ -5,17 +5,33 @@ using UnityEngine.Events;
 using Oculus.Interaction;
 
 /// <summary>
+/// One sign in a jutsu sequence: the ActiveStateGroup that detects it,
+/// the guide visual that shows its ghost hands, and the sound played on success.
+/// </summary>
+[Serializable]
+public class JutsuSignStep
+{
+    [Tooltip("ActiveStateGroup ANDing the L and R ShapeRecognizerActiveState for this sign.")]
+    public ActiveStateGroup activeState;
+
+    [Tooltip("The HandPoseGuideVisual (Drive Externally = true) that shows this sign's ghost hands.")]
+    public HandPoseGuideVisual guideVisual;
+
+    [Tooltip("One is picked at random and played when this sign is completed correctly. Leave slots empty if you don't want variety for this step.")]
+    public AudioClip[] completionSounds;
+}
+
+/// <summary>
 /// One jutsu = an ordered list of hand signs.
-/// Each sign is an ActiveStateGroup that ANDs the left + right
-/// ShapeRecognizerActiveState for that sign (both hands required).
+/// Each sign bundles its detection condition, its guide visual, and its sound.
 /// </summary>
 [Serializable]
 public class JutsuDefinition
 {
     public string jutsuName;
 
-    [Tooltip("Ordered signs. Each entry is an ActiveStateGroup combining the L and R ShapeRecognizerActiveState for that sign.")]
-    public List<ActiveStateGroup> signs = new List<ActiveStateGroup>();
+    [Tooltip("Ordered signs. Each entry bundles the sign's ActiveStateGroup, its guide visual, and its completion sound.")]
+    public List<JutsuSignStep> signs = new List<JutsuSignStep>();
 
     [Tooltip("Seconds a sign must be held continuously to register.")]
     public float holdTime = 0.2f;
@@ -152,7 +168,7 @@ public class JutsuManager : MonoBehaviour
             }
         }
 
-        ActiveStateGroup currentSign = jutsu.signs[_stepIndex];
+        ActiveStateGroup currentSign = jutsu.signs[_stepIndex].activeState;
         if (currentSign == null) return;
 
         bool signActive = currentSign.Active;
@@ -226,7 +242,7 @@ public class JutsuManager : MonoBehaviour
 
         // If the next sign uses the same ActiveStateGroup, force a release first
         // so holding one pose can't complete two identical consecutive steps.
-        _waitingForRelease = jutsu.signs[nextIndex] == jutsu.signs[_stepIndex];
+        _waitingForRelease = jutsu.signs[nextIndex].activeState == jutsu.signs[_stepIndex].activeState;
 
         _stepIndex = nextIndex;
         _holdTimer = 0f;

@@ -1491,6 +1491,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7543206650294371189}
+  - component: {fileID: 265152332611199366}
   m_Layer: 0
   m_Name: Jutsu_Boar_BothHands_Visual
   m_TagString: Untagged
@@ -1515,6 +1516,40 @@ Transform:
   - {fileID: 3100515009004684171}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &265152332611199366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7598888327060708909}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c57c6a4ca4dc449a8ba7898b31af73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandPoseGuideVisual
+  chakra: {fileID: 0}
+  realLeftHand: {fileID: 0}
+  realRightHand: {fileID: 0}
+  guideLeftHand: {fileID: 0}
+  guideRightHand: {fileID: 0}
+  guideRenderers:
+  - {fileID: 1580330738884098214}
+  - {fileID: 8786450796602014010}
+  driveExternally: 1
+  handDistanceThreshold: 0.2
+  debounceTime: 0.15
+  outlineColor: {r: 2, g: 2, b: 0, a: 1}
+  minOutlineWidth: 0.0008
+  maxOutlineWidth: 0.0025
+  pulseSpeed: 2
+  maxBaseOpacity: 0.5
+  maxOutlineOpacity: 1
+  opacityProperty: _Opacity
+  outlineColorProperty: _OutlineColor
+  outlineWidthProperty: _OutlineWidth
+  outlineOpacityProperty: _OutlineOpacity
+  fadeOutDuration: 0.4
 --- !u!1 &7615978448649770161
 GameObject:
   m_ObjectHideFlags: 0

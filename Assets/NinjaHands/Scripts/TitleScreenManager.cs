@@ -11,6 +11,12 @@ public class TitleScreenManager : MonoBehaviour
 
     public LevelManager levelManager;
 
+    [Header("Hand-Tracking Systems (must not run on the title screen)")]
+    [Tooltip("Disabled while on the title screen so free-mode jutsu detection doesn't fire from hands positioned there.")]
+    [SerializeField] private JutsuManager jutsuManager;
+    [Tooltip("Disabled while on the title screen so the chakra charge pose can't charge chakra or trigger the fire VFX.")]
+    [SerializeField] private ChakraCharger chakraCharger;
+
     [Header("Button SFX")]
     [Tooltip("AudioSource on THIS GameObject — must not live under titleScreenRoot or gameplayRoot, or it gets cut off when those deactivate.")]
     [SerializeField] private AudioSource sfxSource;
@@ -40,6 +46,16 @@ public class TitleScreenManager : MonoBehaviour
         if (gameplayRoot != null)
         {
             gameplayRoot.SetActive(false);
+        }
+
+        if (jutsuManager != null)
+        {
+            jutsuManager.enabled = false;
+        }
+
+        if (chakraCharger != null)
+        {
+            chakraCharger.enabled = false;
         }
 
         if (musicSource != null)
@@ -84,6 +100,16 @@ public class TitleScreenManager : MonoBehaviour
     {
         yield return new WaitForSeconds(delay);
 
+        if (jutsuManager != null)
+        {
+            jutsuManager.enabled = true;
+        }
+
+        if (chakraCharger != null)
+        {
+            chakraCharger.enabled = true;
+        }
+
         if (levelManager != null)
         {
             levelManager.BeginGame();
@@ -99,6 +125,16 @@ public class TitleScreenManager : MonoBehaviour
     private IEnumerator ReturnToTitleNextFrame()
     {
         yield return null;
+
+        if (jutsuManager != null)
+        {
+            jutsuManager.enabled = false;
+        }
+
+        if (chakraCharger != null)
+        {
+            chakraCharger.enabled = false;
+        }
 
         if (levelManager != null)
         {

@@ -6,16 +6,12 @@ using UnityEngine;
 [Serializable]
 public class JutsuVFXEntry
 {
-    [Tooltip("Must match JutsuDefinition.jutsuName exactly.")]
     public string jutsuName;
-
-    [Tooltip("VFX GameObject, positioned at the mouth, parented under the head/camera rig.")]
     public GameObject vfxObject;
 
-    [Tooltip("Optional: if the VFX object has a ParticleSystem, Play()/Stop() is called on it. If left empty, the VFX GameObject is just SetActive(true/false).")]
-    public ParticleSystem particleSystem;
+    [Tooltip("All particle systems that make up this VFX (e.g. fire + smoke children). Every one listed here will be explicitly Cleared+Played when the jutsu completes, and Stopped when the VFX ends — don't rely on 'Play On Awake'.")]
+    public ParticleSystem[] particleSystems;
 
-    [Tooltip("Seconds the VFX stays active.")]
     public float duration = 6f;
 }
 
@@ -24,17 +20,16 @@ public class JutsuVFXController : MonoBehaviour
     [SerializeField] private JutsuManager jutsuManager;
     [SerializeField] private List<JutsuVFXEntry> vfxEntries = new List<JutsuVFXEntry>();
 
-    private readonly Dictionary<string, JutsuVFXEntry> _lookup = new Dictionary<string, JutsuVFXEntry>();
-    private Coroutine _activeRoutine;
+    private Dictionary<string, JutsuVFXEntry> _lookup;
 
     private void Awake()
     {
+        _lookup = new Dictionary<string, JutsuVFXEntry>();
         foreach (var entry in vfxEntries)
         {
-            if (!string.IsNullOrEmpty(entry.jutsuName))
-                _lookup[entry.jutsuName] = entry;
+            if (entry == null || string.IsNullOrEmpty(entry.jutsuName)) continue;
+            _lookup[entry.jutsuName] = entry;
 
-            // start hidden
             if (entry.vfxObject != null)
                 entry.vfxObject.SetActive(false);
         }
@@ -54,31 +49,37 @@ public class JutsuVFXController : MonoBehaviour
 
     private void HandleJutsuCompleted(string jutsuName)
     {
-        if (!_lookup.TryGetValue(jutsuName, out var entry) || entry.vfxObject == null)
-            return;
+        if (_lookup == null || !_lookup.TryGetValue(jutsuName, out JutsuVFXEntry entry)) return;
+        if (entry.vfxObject == null) return;
 
-        if (_activeRoutine != null)
-            StopCoroutine(_activeRoutine);
-
-        _activeRoutine = StartCoroutine(PlayVFXForDuration(entry));
+        StartCoroutine(PlayVFXForDuration(entry));
     }
 
     private IEnumerator PlayVFXForDuration(JutsuVFXEntry entry)
     {
         entry.vfxObject.SetActive(true);
 
-        if (entry.particleSystem != null)
+        if (entry.particleSystems != null)
         {
-            entry.particleSystem.Clear();
-            entry.particleSystem.Play();
+            foreach (var ps in entry.particleSystems)
+            {
+                if (ps == null) continue;
+                ps.Clear(true);
+                ps.Play(true);
+            }
         }
 
         yield return new WaitForSeconds(entry.duration);
 
-        if (entry.particleSystem != null)
-            entry.particleSystem.Stop();
+        if (entry.particleSystems != null)
+        {
+            foreach (var ps in entry.particleSystems)
+            {
+                if (ps == null) continue;
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+        }
 
         entry.vfxObject.SetActive(false);
-        _activeRoutine = null;
     }
 }
