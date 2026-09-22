@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -38,13 +39,26 @@ public class LevelManager : MonoBehaviour
 
     private void Start()
     {
+        // Intentionally does nothing by default now — call BeginGame() explicitly
+        // instead (either directly, or from a title screen's Start button).
+        // If you want the OLD auto-start behavior when there's no title screen,
+        // just call BeginGame() here directly.
+    }
+
+    public void BeginGame()
+    {
         EnforceAlwaysActive();
         ShowSet(startingSetIndex);
         previewSetIndex = startingSetIndex;
         _lastPreviewIndex = startingSetIndex;
     }
 
-    /// <summary>Call from a table button's When Select().</summary>
+    /// <summary>
+    /// Immediate set switch. Safe to call directly from code, BeginGame(), or OnValidate().
+    /// If wiring a table button's When Select() to change levels, use SelectLevel(int)
+    /// below instead — it waits a frame so we never deactivate something the
+    /// Interaction SDK is still mid-update on for that same select event.
+    /// </summary>
     public void ShowSet(int index)
     {
         if (index < 0 || index >= targetSets.Count) return;
@@ -52,6 +66,12 @@ public class LevelManager : MonoBehaviour
         // Wipe every shuriken currently in the scene before switching levels,
         // so nothing from the old level carries over.
         StuckShurikenManager.Instance?.ClearAll();
+
+        // Also wipe any currently-spawned FireTarget clone — these are dynamically
+        // instantiated with no parent, so they're invisible to targetSets tracking
+        // and would otherwise survive a level switch indefinitely (e.g. stuck
+        // mid-air between up/down cycles).
+        DespawnAllFireTargets();
 
         for (int i = 0; i < targetSets.Count; i++)
         {
@@ -62,6 +82,18 @@ public class LevelManager : MonoBehaviour
         previewSetIndex = index;
         _lastPreviewIndex = index;
         EnforceAlwaysActive();
+    }
+
+    /// <summary>Wire this to a table button's When Select() instead of ShowSet() directly.</summary>
+    public void SelectLevel(int index)
+    {
+        StartCoroutine(ShowSetNextFrame(index));
+    }
+
+    private IEnumerator ShowSetNextFrame(int index)
+    {
+        yield return null;
+        ShowSet(index);
     }
 
     /// <summary>Resets every resettable target (Target3Health, Target2Health) in the currently active set.</summary>
@@ -117,6 +149,51 @@ public class LevelManager : MonoBehaviour
         if (previewSetIndex != _lastPreviewIndex)
         {
             ShowSet(previewSetIndex);
+        }
+    }
+
+    /// <summary>
+    /// Immediate hide-everything. Used internally by BeginGame-adjacent flows.
+    /// If wiring a "Back to Title" button's own When Select() to this,
+    /// use HideAllSetsDeferred() below instead, for the same reason as SelectLevel().
+    /// </summary>
+    public void HideAllSets()
+    {
+        StuckShurikenManager.Instance?.ClearAll();
+
+        // Same cleanup as ShowSet() — a mid-flight or stuck FireTarget clone
+        // shouldn't survive a return to the title screen either.
+        DespawnAllFireTargets();
+
+        foreach (var set in targetSets)
+        {
+            SetActiveState(set, false);
+        }
+
+        _activeIndex = -1;
+        // alwaysActive objects (player rig, level-select buttons, etc.) are left
+        // untouched here intentionally — they should stay visible/functional even
+        // back at the title screen.
+    }
+
+    /// <summary>Frame-delayed version of HideAllSets(), safe to call from a button's own select event.</summary>
+    public void HideAllSetsDeferred()
+    {
+        StartCoroutine(HideAllSetsNextFrame());
+    }
+
+    private IEnumerator HideAllSetsNextFrame()
+    {
+        yield return null;
+        HideAllSets();
+    }
+
+    private void DespawnAllFireTargets()
+    {
+        var fireTargets = FindObjectsByType<FireTarget>(FindObjectsSortMode.None);
+        foreach (var ft in fireTargets)
+        {
+            ft.Despawn();
         }
     }
 }

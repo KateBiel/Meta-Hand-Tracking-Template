@@ -10,21 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 4cfe1df7ed391a24fbe2a2d275e81b06, type: 3}
-  m_Name: HorseRHandShape
+  m_Name: HorseL_HandShape
   m_EditorClassIdentifier: Oculus.Interaction::Oculus.Interaction.PoseDetection.ShapeRecognizer
-  _shapeName: 
+  _shapeName: Jutsu_Horse_L
   _thumbFeatureConfigs:
-    _value:
-    - _mode: 0
-      _feature: 0
-      _state: 2
-    - _mode: 0
-      _feature: 1
-      _state: 5
-    - _mode: 0
-      _feature: 2
-      _state: 8
-  _indexFeatureConfigs:
     _value:
     - _mode: 0
       _feature: 0
@@ -35,6 +24,14 @@ MonoBehaviour:
     - _mode: 0
       _feature: 2
       _state: 8
+  _indexFeatureConfigs:
+    _value:
+    - _mode: 1
+      _feature: 0
+      _state: 2
+    - _mode: 0
+      _feature: 1
+      _state: 4
   _middleFeatureConfigs:
     _value:
     - _mode: 0
@@ -43,25 +40,13 @@ MonoBehaviour:
     - _mode: 0
       _feature: 1
       _state: 5
-    - _mode: 0
-      _feature: 2
-      _state: 8
   _ringFeatureConfigs:
     _value:
-    - _mode: 0
+    - _mode: 1
       _feature: 0
-      _state: 2
-    - _mode: 0
-      _feature: 1
-      _state: 5
-    - _mode: 0
-      _feature: 2
-      _state: 8
-  _pinkyFeatureConfigs:
-    _value:
-    - _mode: 0
-      _feature: 0
-      _state: 2
+      _state: 0
     - _mode: 1
       _feature: 1
       _state: 3
+  _pinkyFeatureConfigs:
+    _value: []
