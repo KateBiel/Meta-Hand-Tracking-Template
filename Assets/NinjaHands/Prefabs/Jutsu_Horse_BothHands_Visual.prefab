@@ -1385,6 +1385,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7953966089527782193}
+  - component: {fileID: 9173480244813548287}
   m_Layer: 0
   m_Name: Jutsu_Horse_BothHands_Visual
   m_TagString: Untagged
@@ -1409,6 +1410,42 @@ Transform:
   - {fileID: 3770800613586811622}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &9173480244813548287
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6588782225427505885}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 52c57c6a4ca4dc449a8ba7898b31af73, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::HandPoseGuideVisual
+  chakra: {fileID: 0}
+  jutsuManager: {fileID: 0}
+  realLeftHand: {fileID: 0}
+  realRightHand: {fileID: 0}
+  guideLeftHand: {fileID: 3080404289251260344}
+  guideRightHand: {fileID: 1860174942490140493}
+  guideRenderers:
+  - {fileID: 4983197454985306156}
+  - {fileID: 935121903789591093}
+  driveExternally: 1
+  handDistanceThreshold: 0.2
+  debounceTime: 0.15
+  lowChakraThreshold: 20
+  outlineColor: {r: 2, g: 2, b: 0, a: 1}
+  minOutlineWidth: 0.0008
+  maxOutlineWidth: 0.0025
+  pulseSpeed: 2
+  maxBaseOpacity: 0.5
+  maxOutlineOpacity: 1
+  opacityProperty: _Opacity
+  outlineColorProperty: _OutlineColor
+  outlineWidthProperty: _OutlineWidth
+  outlineOpacityProperty: _OutlineOpacity
+  fadeOutDuration: 0.4
 --- !u!1 &6728138929438287058
 GameObject:
   m_ObjectHideFlags: 0

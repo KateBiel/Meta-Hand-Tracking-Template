@@ -7,6 +7,9 @@ public class Target3Health : MonoBehaviour, IHittable
     public float maxHealth = 100f;
     public float current;
 
+    [Header("Presence VFX (optional)")]
+    public TargetPresenceVFX presenceVFX;
+
     [Header("References")]
     public TwoTierHealthBar healthBar;
     public Collider hitCollider;
@@ -76,7 +79,14 @@ public class Target3Health : MonoBehaviour, IHittable
             audioSource.PlayOneShot(defeatSound);
         }
 
-        StartCoroutine(DefeatSequence());
+        if (presenceVFX != null)
+        {
+            presenceVFX.PlayDefeatSequence(() => gameObject.SetActive(false));
+        }
+        else
+        {
+            StartCoroutine(DefeatSequence());
+        }
     }
 
     IEnumerator DefeatSequence()
@@ -89,10 +99,10 @@ public class Target3Health : MonoBehaviour, IHittable
 
     public void ResetHealth()
     {
+        gameObject.SetActive(true);
         current = maxHealth;
         isDefeated = false;
         if (hitCollider != null) hitCollider.enabled = true;
         if (healthBar != null) healthBar.SetHealth(current, maxHealth);
-        gameObject.SetActive(true);
     }
 }

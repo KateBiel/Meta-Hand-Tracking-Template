@@ -18,7 +18,7 @@ public class TargetPresenceVFX : MonoBehaviour
     [Tooltip("Renderers to hide during the appear delay / defeat window. Leave empty to auto-find all child renderers.")]
     public Renderer[] renderers;
     [Tooltip("Optional. If left empty, sounds play via AudioSource.PlayClipAtPoint instead.")]
-    public GameObject uiRoot;          
+    public GameObject uiRoot;
     public AudioSource audioSource;
 
 
@@ -67,7 +67,9 @@ public class TargetPresenceVFX : MonoBehaviour
     /// <summary>
     /// Call from Defeat() instead of deactivating the GameObject directly.
     /// Waits defeatSmokeDelay (target stays visible), then plays smoke + sound,
-    /// then invokes onComplete (typically gameObject.SetActive(false)).
+    /// waits for the sound to actually finish (so disabling the GameObject
+    /// afterward doesn't cut it off), then invokes onComplete
+    /// (typically gameObject.SetActive(false)).
     /// </summary>
     public void PlayDefeatSequence(Action onComplete)
     {
@@ -81,13 +83,20 @@ public class TargetPresenceVFX : MonoBehaviour
         SpawnVFX(defeatSmokeVFXPrefab);
         PlaySound(defeatPoofSound);
 
+        // Give the poof sound time to actually play before we (likely) disable
+        // this GameObject via onComplete — disabling it stops any audio still
+        // playing on a child AudioSource immediately.
+        float soundWait = (defeatPoofSound != null) ? defeatPoofSound.length : 0f;
+        if (soundWait > 0f)
+            yield return new WaitForSeconds(soundWait);
+
         onComplete?.Invoke();
     }
 
     private void SetVisible(bool visible)
     {
         if (hitCollider != null) hitCollider.enabled = visible;
-        if (uiRoot != null) uiRoot.SetActive(visible);  
+        if (uiRoot != null) uiRoot.SetActive(visible);
         if (renderers == null) return;
         foreach (var r in renderers)
         {

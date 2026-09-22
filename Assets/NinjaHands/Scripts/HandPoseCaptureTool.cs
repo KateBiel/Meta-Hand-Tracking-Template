@@ -12,6 +12,11 @@ using UnityEditor;
 
 public class HandPoseCaptureTool : MonoBehaviour
 {
+    [Header("Capture Toggles")]
+    [Tooltip("Uncheck to skip this hand entirely during capture — no logging, no auto-write, no prefab copy. Use this when you're reusing an already-captured pose for that hand and only want to (re)capture the other one.")]
+    [SerializeField] private bool captureLeftHand = true;
+    [SerializeField] private bool captureRightHand = true;
+
     [Header("Left Hand")]
     [SerializeField] private Transform leftHandRoot;
     [SerializeField, Interface(typeof(IFingerFeatureStateProvider))] private UnityEngine.Object _leftFingerProvider;
@@ -79,10 +84,16 @@ public class HandPoseCaptureTool : MonoBehaviour
         LogPoseStates();
 
 #if UNITY_EDITOR
-        AutoWriteShapeRecognizer("L", LeftFingerProvider, leftShapeRecognizer);
-        AutoWriteShapeRecognizer("R", RightFingerProvider, rightShapeRecognizer);
-        AutoWriteTransformConfig(LeftTransformProvider, leftTransformConfigSource);
-        AutoWriteTransformConfig(RightTransformProvider, rightTransformConfigSource);
+        if (captureLeftHand)
+        {
+            AutoWriteShapeRecognizer("L", LeftFingerProvider, leftShapeRecognizer);
+            AutoWriteTransformConfig(LeftTransformProvider, leftTransformConfigSource);
+        }
+        if (captureRightHand)
+        {
+            AutoWriteShapeRecognizer("R", RightFingerProvider, rightShapeRecognizer);
+            AutoWriteTransformConfig(RightTransformProvider, rightTransformConfigSource);
+        }
 #endif
 
         SpawnHandCopies();
@@ -95,8 +106,10 @@ public class HandPoseCaptureTool : MonoBehaviour
     {
         var sb = new StringBuilder();
         sb.AppendLine($"=== Captured Pose: {poseName} ===");
-        AppendHandStates(sb, "L", LeftFingerProvider, LeftTransformProvider, leftTransformConfigSource);
-        AppendHandStates(sb, "R", RightFingerProvider, RightTransformProvider, rightTransformConfigSource);
+        if (captureLeftHand)
+            AppendHandStates(sb, "L", LeftFingerProvider, LeftTransformProvider, leftTransformConfigSource);
+        if (captureRightHand)
+            AppendHandStates(sb, "R", RightFingerProvider, RightTransformProvider, rightTransformConfigSource);
         Debug.Log(sb.ToString());
     }
 
@@ -204,8 +217,10 @@ public class HandPoseCaptureTool : MonoBehaviour
 
     private void SpawnHandCopies()
     {
-        SpawnHandCopy(leftHandRoot, poseName + "_L");
-        SpawnHandCopy(rightHandRoot, poseName + "_R");
+        if (captureLeftHand)
+            SpawnHandCopy(leftHandRoot, poseName + "_L");
+        if (captureRightHand)
+            SpawnHandCopy(rightHandRoot, poseName + "_R");
     }
 
     private void SpawnHandCopy(Transform source, string name)

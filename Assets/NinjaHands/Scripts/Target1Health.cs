@@ -28,6 +28,8 @@ public class Target1Health : MonoBehaviour, IHittable
     void Awake()
     {
         current = maxHealth;
+        isDefeated = false;
+        _lastIsDefeated = false;
     }
 
     [ContextMenu("Force Defeat (Test)")]
